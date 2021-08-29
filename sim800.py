@@ -15,7 +15,7 @@ import machine
 
 
 
-class gsm:
+class sim800:
     
     """
 
