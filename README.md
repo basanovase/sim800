@@ -5,13 +5,12 @@ Add the sim800 file to the micropython device or the local machine
 
 
 Use:
-<code>
-<code> import sim800
+<code>import sim800
 
- gsm = sim800.gsm(2,115200)
+<code>gsm = sim800.gsm(2,115200)
 
- signal = gsm.signal_check()
+<code>signal = gsm.signal_check()
  
- networks = gsm.available_networks()
+<code>networks = gsm.available_networks()
  
-</code>
+
