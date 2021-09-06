@@ -1,5 +1,5 @@
 # sim800
-Library for interfacing with SIM800 in Micropython
+Library for interfacing with SIM800 module in Micropython
 
 Add the sim800 file to the micropython device or the local machine
 
