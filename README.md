@@ -18,7 +18,6 @@ networks = gsm.available_networks()
 SMS:
 
 
-
 read_all_sms()
 
 send_sms('+64XXXXXXXXX',"Blue papers please")
