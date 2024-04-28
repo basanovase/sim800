@@ -7,9 +7,6 @@ Library for interfacing with SIM800 in Micropython
 
 
 """
-
-
-
 import machine
 
 
