@@ -15,58 +15,99 @@ import machine
 
 
 
-class sim800:
-    
-    """
+import machine
 
-    Main GSM class - initialise UART pin and BAUD
-    
+class SIM800:
     """
+    Class to interface with the SIM800 module. Initialize with UART pin and baud rate.
+    """
+    def __init__(self, uart_pin, baud=115200):
+        self.uart = machine.UART(uart_pin, baud)
     
-    def __init__(self, UART_PIN, BAUD=115200):
-        self.UART_PIN = UART_PIN
-        self.BAUD = BAUD
-        self.gsm = machine.UART(self.UART_PIN, self.BAUD)
-        
-    def signal_check(self):
-        signal = self.gsm.write('AT+CSQ\r')
-        return signal
+    def send_command(self, command, timeout=1000):
+        """
+        Send an AT command and return the response.
+        """
+        self.uart.write(command + '\r\n')
+        return self.uart.readall()
+
+    def signal_quality(self):
+        """
+        Check signal quality.
+        """
+        return self.send_command('AT+CSQ')
 
     def available_networks(self):
-        networks = self.gsm.write('AT+COPS=?\r')
-        return networks
+        """
+        List available networks.
+        """
+        return self.send_command('AT+COPS=?')
 
-    def is_connected(self):
-        conn = self.gsm.write('AT+CREG?\r')
-        return conn
-    
+    def network_registration(self):
+        """
+        Check network registration status.
+        """
+        return self.send_command('AT+CREG?')
+
     def read_sms(self, index=1):
         """
-        Read SMS from SIM memory at nominated index
+        Read an SMS at a given index.
         """
-        message = self.gsm.write('AT+CMGR={}'.format(str(index)))
-        return message
-    
+        return self.send_command(f'AT+CMGR={index}')
+
     def read_all_sms(self):
         """
-        Read ALL SMS from memory
+        Read all SMS messages stored in the memory.
         """
-        messages = self.gsm.write('AT+CMGL"all"')
-        return messages
-    
-    def delete_message(self, index)
-        self.gsm.write('AT+CMGD={}'.format(index))
-        
-    def delete_all_messages(self)
-        self.gsm.write('AT+CMGD="all"')
-    
+        return self.send_command('AT+CMGL="ALL"')
+
+    def delete_sms(self, index):
+        """
+        Delete an SMS at a given index.
+        """
+        self.send_command(f'AT+CMGD={index}')
+
+    def delete_all_sms(self):
+        """
+        Delete all SMS messages.
+        """
+        self.send_command('AT+CMGDA="DEL ALL"')
+
     def send_sms(self, number, message):
         """
-            Send a message - number must be in format + - example +64XXXXXXXXX 
+        Send an SMS message.
         """
-        self.gsm.write('AT+CMGS="{}"')
-        self.gsm.write(str(message))
-        #end-of-file marker in hex - potentially needs a leading zero
-        self.gsm.write("\x1a")
-       
+        self.send_command(f'AT+CMGS="{number}"')
+        self.uart.write(message + chr(26))
+
+    def dial_number(self, number):
+        """
+        Dial a phone number.
+        """
+        return self.send_command(f'ATD{number};')
+
+    def hang_up(self):
+        """
+        Hang up an ongoing call.
+        """
+        return self.send_command('ATH')
+
+    def answer_call(self):
+        """
+        Answer an incoming call.
+        """
+        return self.send_command('ATA')
+
+    def set_sms_format(self, format="1"):
+        """
+        Set SMS format (0 for PDU mode, 1 for text mode).
+        """
+        return self.send_command(f'AT+CMGF={format}')
+
+    def set_text_mode_params(self, fo, vp, pid, dcs):
+        """
+        Set parameters for text mode SMS.
+        """
+        return self.send_command(f'AT+CSMP={fo},{vp},{pid},{dcs}')
+
 
