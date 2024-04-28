@@ -300,3 +300,37 @@ class SIM800:
         """
         return self.send_command('AT+CIPGSMLOC=1,1')
 
+    def start_tcp_connection(self, mode, ip, port):
+        """
+        Start a TCP or UDP connection.
+        Mode 'TCP' or 'UDP', IP address, and port number are required.
+        """
+        self.send_command(f'AT+CIPSTART="{mode}","{ip}","{port}"')
+
+    def send_data_tcp(self, data):
+        """
+        Send data through the TCP or UDP connection.
+        """
+        # First, set up the module to receive the data length
+        self.send_command(f'AT+CIPSEND={len(data)}')
+        # Send the actual data
+        return self.send_command(data)
+
+    def receive_data_tcp(self):
+        """
+        Receive data from TCP or UDP connection.
+        """
+        return self.send_command('AT+CIPRXGET=2')
+
+    def close_tcp_connection(self):
+        """
+        Close the TCP or UDP connection.
+        """
+        return self.send_command('AT+CIPCLOSE=1')
+
+    def shutdown_gprs(self):
+        """
+        Deactivate GPRS PDP context, effectively shutting down GPRS service.
+        """
+        return self.send_command('AT+CIPSHUT')
+
