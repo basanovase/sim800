@@ -15,7 +15,6 @@ import machine
 
 
 
-import machine
 
 class SIM800:
     """
