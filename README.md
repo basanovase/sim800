@@ -1,23 +1,18 @@
-# sim800
-Library for interfacing with SIM800 module in Micropython
+# SIM800 MicroPython Library
 
-Add the sim800 file to the micropython device or the local machine
+This library provides an interface for the SIM800 module to perform GSM, GPRS, SMS, and TCP/IP communications using MicroPython on microcontrollers. It includes functions to handle voice calls, SMS, HTTP requests, FTP
 
+## Installation
 
-Use:
+Copy the `sim800` folder to your MicroPython device filesystem. Make sure the MicroPython firmware supports the `machine` module for UART communication.
 
-import sim800
- 
-gsm = sim800.gsm(2,115200)
- 
-signal = gsm.signal_check()
+## Usage
 
-networks = gsm.available_networks()
- 
+Here's how to use the library to perform various tasks with the SIM800 module:
 
-SMS:
+### Initialize the SIM800 Module
 
-
-read_all_sms()
-
-send_sms('+64XXXXXXXXX',"Blue papers please")
+```python
+from sim800 import SIM800
+sim800 = SIM800(uart_pin=1, baud=115200)
+```
