@@ -8,7 +8,7 @@ Copy the `sim800` folder to your MicroPython device filesystem. Make sure the Mi
 
 ## Usage
 
-Here's how to use the library to perform various tasks with the SIM800 module:
+
 
 ### Initialize the SIM800 Module
 
