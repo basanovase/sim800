@@ -7,66 +7,330 @@ Library for interfacing with SIM800 in Micropython
 
 
 """
-
-
-
 import machine
 
 
 
 
-class sim800:
-    
-    """
 
-    Main GSM class - initialise UART pin and BAUD
-    
+class SIM800:
     """
+    Class to interface with the SIM800 module. Initialize with UART pin and baud rate.
+    """
+    def __init__(self, uart_pin, baud=115200):
+        self.uart = machine.UART(uart_pin, baud)
     
-    def __init__(self, UART_PIN, BAUD=115200):
-        self.UART_PIN = UART_PIN
-        self.BAUD = BAUD
-        self.gsm = machine.UART(self.UART_PIN, self.BAUD)
-        
-    def signal_check(self):
-        signal = self.gsm.write('AT+CSQ\r')
-        return signal
+    def send_command(self, command, timeout=1000):
+        """
+        Send an AT command and return the response.
+        """
+        self.uart.write(command + '\r')
+        return self.uart.readall()
+
+    def signal_quality(self):
+        """
+        Check signal quality.
+        """
+        return self.send_command('AT+CSQ')
 
     def available_networks(self):
-        networks = self.gsm.write('AT+COPS=?\r')
-        return networks
+        """
+        List available networks.
+        """
+        return self.send_command('AT+COPS=?')
 
-    def is_connected(self):
-        conn = self.gsm.write('AT+CREG?\r')
-        return conn
-    
+    def network_registration(self):
+        """
+        Check network registration status.
+        """
+        return self.send_command('AT+CREG?')
+
     def read_sms(self, index=1):
         """
-        Read SMS from SIM memory at nominated index
+        Read an SMS at a given index.
         """
-        message = self.gsm.write('AT+CMGR={}'.format(str(index)))
-        return message
-    
+        return self.send_command(f'AT+CMGR={index}')
+
     def read_all_sms(self):
         """
-        Read ALL SMS from memory
+        Read all SMS messages stored in the memory.
         """
-        messages = self.gsm.write('AT+CMGL"all"')
-        return messages
-    
-    def delete_message(self, index)
-        self.gsm.write('AT+CMGD={}'.format(index))
-        
-    def delete_all_messages(self)
-        self.gsm.write('AT+CMGD="all"')
-    
+        return self.send_command('AT+CMGL="ALL"')
+
+    def delete_sms(self, index):
+        """
+        Delete an SMS at a given index.
+        """
+        self.send_command(f'AT+CMGD={index}')
+
+    def delete_all_sms(self):
+        """
+        Delete all SMS messages.
+        """
+        self.send_command('AT+CMGDA="DEL ALL"')
+
     def send_sms(self, number, message):
         """
-            Send a message - number must be in format + - example +64XXXXXXXXX 
+        Send an SMS message.
         """
-        self.gsm.write('AT+CMGS="{}"')
-        self.gsm.write(str(message))
-        #end-of-file marker in hex - potentially needs a leading zero
-        self.gsm.write("\x1a")
-       
+        self.send_command(f'AT+CMGS="{number}"')
+        self.uart.write(message + chr(26))
+
+    def dial_number(self, number):
+        """
+        Dial a phone number.
+        """
+        return self.send_command(f'ATD{number};')
+
+    def hang_up(self):
+        """
+        Hang up an ongoing call.
+        """
+        return self.send_command('ATH')
+
+    def answer_call(self):
+        """
+        Answer an incoming call.
+        """
+        return self.send_command('ATA')
+
+    def set_sms_format(self, format="1"):
+        """
+        Set SMS format (0 for PDU mode, 1 for text mode).
+        """
+        return self.send_command(f'AT+CMGF={format}')
+
+    def set_text_mode_params(self, fo, vp, pid, dcs):
+        """
+        Set parameters for text mode SMS.
+        """
+        return self.send_command(f'AT+CSMP={fo},{vp},{pid},{dcs}')
+
+    def get_network_time(self):
+        """
+        Get network time and date.
+        """
+        return self.send_command('AT+CCLK?')
+
+    def attach_gprs(self):
+        """
+        Attach to GPRS service.
+        """
+        return self.send_command('AT+CGATT=1')
+
+    def detach_gprs(self):
+        """
+        Detach from GPRS service.
+        """
+        return self.send_command('AT+CGATT=0')
+
+    def set_apn(self, apn, user='', pwd=''):
+        """
+        Set the APN for the GPRS connection.
+        """
+        self.send_command(f'AT+CSTT="{apn}","{user}","{pwd}"')
+        return self.send_command('AT+CIICR')
+
+    def get_ip_address(self):
+        """
+        Get local IP address.
+        """
+        return self.send_command('AT+CIFSR')
+
+    def http_init(self):
+        """
+        Initialize HTTP service.
+        """
+        return self.send_command('AT+HTTPINIT')
+
+    def http_set_param(self, param, value):
+        """
+        Set HTTP parameter.
+        """
+        return self.send_command(f'AT+HTTPPARA="{param}","{value}"')
+
+    def http_get(self, url):
+        """
+        Perform HTTP GET method.
+        """
+        self.http_set_param("URL", url)
+        self.send_command('AT+HTTPACTION=0')
+        return self.send_command('AT+HTTPREAD')
+
+    def http_post(self, url, data):
+        """
+        Perform an HTTP POST method.
+        """
+        self.http_set_param("URL", url)
+        self.send_command(f'AT+HTTPDATA={len(data)},10000')
+        self.uart.write(data)
+        self.send_command('AT+HTTPACTION=1')
+        return self.send_command('AT+HTTPREAD')
+
+    def ftp_init(self, server, username, password):
+        """
+        Initialize FTP session.
+        """
+        self.send_command(f'AT+FTPCID=1')
+        self.send_command(f'AT+FTPSERV="{server}"')
+        self.send_command(f'AT+FTPUN="{username}"')
+        return self.send_command(f'AT+FTPPW="{password}"')
+
+    def ftp_get_file(self, file_name, file_path):
+        """
+        Download file from FTP server.
+        """
+        self.send_command(f'AT+FTPGETNAME="{file_name}"')
+        self.send_command(f'AT+FTPGETPATH="{file_path}"')
+        return self.send_command('AT+FTPGET=1')
+
+    def adjust_speaker_volume(self, level=5):
+        """
+        Adjust the speaker volume (0 to 100).
+        """
+        return self.send_command(f'AT+CLVL={level}')
+
+    def email_init(self):
+        """
+        Initialize the email functionality.
+        """
+        return self.send_command('AT+EMAILCID=1')
+
+    def email_config_smtp(self, server, port, username, password):
+        """
+        Configure SMTP server settings.
+        """
+        self.send_command(f'AT+SMTPSRV="{server}",{port}')
+        self.send_command(f'AT+SMTPAUTH=1,"{username}","{password}"')
+
+    def email_set_recipient(self, recipient):
+        """
+        Set the recipient of the email.
+        """
+        return self.send_command(f'AT+SMTPRCPT=0,0,"{recipient}"')
+
+    def email_send_subject(self, subject):
+        """
+        Set the subject of the email.
+        """
+        return self.send_command(f'AT+SMTPSUB="{subject}"')
+
+    def email_send_body(self, body):
+        """
+        Write the body of the email.
+        """
+        return self.send_command(f'AT+SMTPBODY="{body}"')
+
+    def email_send(self):
+        """
+        Send the email.
+        """
+        return self.send_command('AT+SMTPSEND')
+
+    def email_read_response(self):
+        """
+        Read response from the server after sending the email.
+        """
+        return self.send_command('AT+SMTPREAD')
+
+    def email_terminate(self):
+        """
+        Terminate the email session.
+        """
+        return self.send_command('AT+HTTPTERM')
+
+    def mms_set_server(self, url, proxy, port):
+        """
+        Set the MMS server URL and proxy settings.
+        """
+        self.send_command(f'AT+CMMSCURL="{url}"')
+        self.send_command(f'AT+CMMSPROTO="{proxy}",{port}')
+
+    def mms_configure(self, apn, username, password):
+        """
+        Set the APN, username, and password for the MMS connection.
+        """
+        self.send_command(f'AT+CMMSCID=1,"{apn}","{username}","{password}"')
+
+    def mms_add_recipient(self, number):
+        """
+        Add a recipient to the MMS message.
+        """
+        self.send_command(f'AT+CMMSRECP=1,"{number}"')
+
+    def mms_set_content(self, subject, body):
+        """
+        Set the subject and body of the MMS.
+        """
+        self.send_command(f'AT+CMMSSENDCFG="{subject}","{body}"')
+
+    def mms_attach_file(self, filepath):
+        """
+        Attach a file to the MMS.
+        """
+        self.send_command(f'AT+CMMSDOWN="FILE","{filepath}"')
+
+    def mms_send(self):
+        """
+        Send the MMS message.
+        """
+        self.send_command('AT+CMMSSEND')
+
+    def mms_read(self, message_id):
+        """
+        Read an MMS message by ID.
+        """
+        self.send_command(f'AT+CMMSREAD={message_id}')
+
+    def mms_init(self):
+        """
+        Initialize the MMS functionality.
+        """
+        return self.send_command('AT+CMMSINIT')
+
+    def mms_terminate(self):
+        """
+        Terminate the MMS session.
+        """
+        return self.send_command('AT+CMMSTERM')
+
+    def get_gsm_location(self):
+        """
+        Get GSM location and time. This uses network triangulation to determine location.
+        """
+        return self.send_command('AT+CIPGSMLOC=1,1')
+
+    def start_tcp_connection(self, mode, ip, port):
+        """
+        Start a TCP or UDP connection.
+        Mode 'TCP' or 'UDP', IP address, and port number are required.
+        """
+        self.send_command(f'AT+CIPSTART="{mode}","{ip}","{port}"')
+
+    def send_data_tcp(self, data):
+        """
+        Send data through the TCP or UDP connection.
+        """
+        # First, set up the module to receive the data length
+        self.send_command(f'AT+CIPSEND={len(data)}')
+        # Send the actual data
+        return self.send_command(data)
+
+    def receive_data_tcp(self):
+        """
+        Receive data from TCP or UDP connection.
+        """
+        return self.send_command('AT+CIPRXGET=2')
+
+    def close_tcp_connection(self):
+        """
+        Close the TCP or UDP connection.
+        """
+        return self.send_command('AT+CIPCLOSE=1')
+
+    def shutdown_gprs(self):
+        """
+        Deactivate GPRS PDP context, effectively shutting down GPRS service.
+        """
+        return self.send_command('AT+CIPSHUT')
 
