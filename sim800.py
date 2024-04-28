@@ -106,4 +106,88 @@ class SIM800:
         """
         return self.send_command(f'AT+CSMP={fo},{vp},{pid},{dcs}')
 
+    def get_network_time(self):
+        """
+        Get network time and date.
+        """
+        return self.send_command('AT+CCLK?')
+
+    def attach_gprs(self):
+        """
+        Attach to GPRS service.
+        """
+        return self.send_command('AT+CGATT=1')
+
+    def detach_gprs(self):
+        """
+        Detach from GPRS service.
+        """
+        return self.send_command('AT+CGATT=0')
+
+    def set_apn(self, apn, user='', pwd=''):
+        """
+        Set the APN for the GPRS connection.
+        """
+        self.send_command(f'AT+CSTT="{apn}","{user}","{pwd}"')
+        return self.send_command('AT+CIICR')
+
+    def get_ip_address(self):
+        """
+        Get local IP address.
+        """
+        return self.send_command('AT+CIFSR')
+
+    def http_init(self):
+        """
+        Initialize HTTP service.
+        """
+        return self.send_command('AT+HTTPINIT')
+
+    def http_set_param(self, param, value):
+        """
+        Set HTTP parameter.
+        """
+        return self.send_command(f'AT+HTTPPARA="{param}","{value}"')
+
+    def http_get(self, url):
+        """
+        Perform HTTP GET method.
+        """
+        self.http_set_param("URL", url)
+        self.send_command('AT+HTTPACTION=0')
+        return self.send_command('AT+HTTPREAD')
+
+    def http_post(self, url, data):
+        """
+        Perform an HTTP POST method.
+        """
+        self.http_set_param("URL", url)
+        self.send_command(f'AT+HTTPDATA={len(data)},10000')
+        self.uart.write(data)
+        self.send_command('AT+HTTPACTION=1')
+        return self.send_command('AT+HTTPREAD')
+
+    def ftp_init(self, server, username, password):
+        """
+        Initialize FTP session.
+        """
+        self.send_command(f'AT+FTPCID=1')
+        self.send_command(f'AT+FTPSERV="{server}"')
+        self.send_command(f'AT+FTPUN="{username}"')
+        return self.send_command(f'AT+FTPPW="{password}"')
+
+    def ftp_get_file(self, file_name, file_path):
+        """
+        Download file from FTP server.
+        """
+        self.send_command(f'AT+FTPGETNAME="{file_name}"')
+        self.send_command(f'AT+FTPGETPATH="{file_path}"')
+        return self.send_command('AT+FTPGET=1')
+
+    def adjust_speaker_volume(self, level=5):
+        """
+        Adjust the speaker volume (0 to 100).
+        """
+        return self.send_command(f'AT+CLVL={level}')
+
 
