@@ -190,4 +190,52 @@ class SIM800:
         """
         return self.send_command(f'AT+CLVL={level}')
 
+    def email_init(self):
+        """
+        Initialize the email functionality.
+        """
+        return self.send_command('AT+EMAILCID=1')
+
+    def email_config_smtp(self, server, port, username, password):
+        """
+        Configure SMTP server settings.
+        """
+        self.send_command(f'AT+SMTPSRV="{server}",{port}')
+        self.send_command(f'AT+SMTPAUTH=1,"{username}","{password}"')
+
+    def email_set_recipient(self, recipient):
+        """
+        Set the recipient of the email.
+        """
+        return self.send_command(f'AT+SMTPRCPT=0,0,"{recipient}"')
+
+    def email_send_subject(self, subject):
+        """
+        Set the subject of the email.
+        """
+        return self.send_command(f'AT+SMTPSUB="{subject}"')
+
+    def email_send_body(self, body):
+        """
+        Write the body of the email.
+        """
+        return self.send_command(f'AT+SMTPBODY="{body}"')
+
+    def email_send(self):
+        """
+        Send the email.
+        """
+        return self.send_command('AT+SMTPSEND')
+
+    def email_read_response(self):
+        """
+        Read response from the server after sending the email.
+        """
+        return self.send_command('AT+SMTPREAD')
+
+    def email_terminate(self):
+        """
+        Terminate the email session.
+        """
+        return self.send_command('AT+HTTPTERM')
 
