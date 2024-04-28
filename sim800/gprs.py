@@ -51,3 +51,12 @@ class SIM800GPRS(SIM800):
         Deactivate GPRS PDP context, effectively shutting down the GPRS service.
         """
         return self.send_command('AT+CIPSHUT')
+
+    def get_gsm_location(self):
+        """
+        Get the GSM location based on the nearest cell tower.
+        Returns the longitude and latitude along with a timestamp.
+        """
+        response = self.send_command('AT+CIPGSMLOC=1,1')
+        return response
+
