@@ -239,3 +239,58 @@ class SIM800:
         """
         return self.send_command('AT+HTTPTERM')
 
+    def mms_set_server(self, url, proxy, port):
+        """
+        Set the MMS server URL and proxy settings.
+        """
+        self.send_command(f'AT+CMMSCURL="{url}"')
+        self.send_command(f'AT+CMMSPROTO="{proxy}",{port}')
+
+    def mms_configure(self, apn, username, password):
+        """
+        Set the APN, username, and password for the MMS connection.
+        """
+        self.send_command(f'AT+CMMSCID=1,"{apn}","{username}","{password}"')
+
+    def mms_add_recipient(self, number):
+        """
+        Add a recipient to the MMS message.
+        """
+        self.send_command(f'AT+CMMSRECP=1,"{number}"')
+
+    def mms_set_content(self, subject, body):
+        """
+        Set the subject and body of the MMS.
+        """
+        self.send_command(f'AT+CMMSSENDCFG="{subject}","{body}"')
+
+    def mms_attach_file(self, filepath):
+        """
+        Attach a file to the MMS.
+        """
+        self.send_command(f'AT+CMMSDOWN="FILE","{filepath}"')
+
+    def mms_send(self):
+        """
+        Send the MMS message.
+        """
+        self.send_command('AT+CMMSSEND')
+
+    def mms_read(self, message_id):
+        """
+        Read an MMS message by ID.
+        """
+        self.send_command(f'AT+CMMSREAD={message_id}')
+
+    def mms_init(self):
+        """
+        Initialize the MMS functionality.
+        """
+        return self.send_command('AT+CMMSINIT')
+
+    def mms_terminate(self):
+        """
+        Terminate the MMS session.
+        """
+        return self.send_command('AT+CMMSTERM')
+
