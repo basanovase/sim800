@@ -294,3 +294,9 @@ class SIM800:
         """
         return self.send_command('AT+CMMSTERM')
 
+    def get_gsm_location(self):
+        """
+        Get GSM location and time. This uses network triangulation to determine location.
+        """
+        return self.send_command('AT+CIPGSMLOC=1,1')
+
