@@ -24,7 +24,7 @@ class SIM800:
         """
         Send an AT command and return the response.
         """
-        self.uart.write(command + '\r\n')
+        self.uart.write(command + '\r')
         return self.uart.readall()
 
     def signal_quality(self):
