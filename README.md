@@ -4,7 +4,7 @@ This library provides an interface for the SIM800 module to perform GSM, GPRS, S
 
 ## Installation
 
-Copy the `sim800` folder to your MicroPython device filesystem. 
+Copy the `sim800` folder to your MicroPython device filesystem. I advise a repo structure main.py entrypoint and importing as below.
 
 ## Usage
 
