@@ -4,7 +4,7 @@ This library provides an interface for the SIM800 module to perform GSM, GPRS, S
 
 ## Installation
 
-Copy the `sim800` folder to your MicroPython device filesystem. Ensure that the MicroPython firmware supports the `machine` module for UART communication.
+Copy the `sim800` folder to your MicroPython device filesystem. 
 
 ## Usage
 
