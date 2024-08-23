@@ -48,6 +48,3 @@ class SIM800Utils:
         uart.write(command + '\r')
         return SIM800Utils.wait_for_response(uart, wait_for, timeout)
 
-
-        # ensure the message is properly encoded (e.g., GSM 7-bit).
-        return message  # Assuming no encoding is necessary in this example.
