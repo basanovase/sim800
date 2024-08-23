@@ -48,14 +48,6 @@ class SIM800Utils:
         uart.write(command + '\r')
         return SIM800Utils.wait_for_response(uart, wait_for, timeout)
 
-    @staticmethod
-    def format_sms_message(message):
-        """
-        Formats the SMS message to ensure compatibility with the SIM800 module.
 
-        :param message: The SMS message to format.
-        :return: The formatted SMS message.
-        """
-        # Depending on the SIM800 module's SMS mode, this could be a place to 
         # ensure the message is properly encoded (e.g., GSM 7-bit).
         return message  # Assuming no encoding is necessary in this example.
