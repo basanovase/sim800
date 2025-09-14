@@ -1,6 +1,17 @@
 # SIM800 MicroPython Library
 
+
+
+
 This library provides an interface for the SIM800 module to perform GSM, GPRS, SMS, and TCP/IP communications using MicroPython on microcontrollers. It includes functions to handle voice calls, SMS, HTTP requests, FTP, and more.
+
+
+## Testing Status 🔄
+- [x] Protocol parsing verified against manual examples
+- [In progress] Hardware testing with LD2450 module
+
+
+
 
 ## Installation
 
