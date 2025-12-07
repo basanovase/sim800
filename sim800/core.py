@@ -45,3 +45,47 @@ class SIM800:
         Resets the SIM800 module.
         """
         self.send_command('AT+CFUN=1,1')  # Reset the module
+
+    def get_network_time(self):
+        """
+        Gets the current time from the network.
+        Returns a dictionary with year, month, day, hour, minute, second, and timezone,
+        or None if the time could not be retrieved.
+        """
+        response = self.send_command('AT+CCLK?')
+        response_str = response.decode('utf-8') if isinstance(response, bytes) else response
+
+        if '+CCLK:' in response_str:
+            try:
+                # Response format: +CCLK: "yy/MM/dd,HH:mm:ss±zz"
+                time_str = response_str.split('+CCLK:')[1].split('"')[1]
+                date_part, time_part = time_str.split(',')
+                year, month, day = date_part.split('/')
+
+       
+                if '+' in time_part:
+                    time_only, tz = time_part.split('+')
+                    tz = '+' + tz
+                elif '-' in time_part[2:]:  
+                    idx = time_part.rfind('-')
+                    time_only = time_part[:idx]
+                    tz = time_part[idx:]
+                else:
+                    time_only = time_part
+                    tz = '+00'
+
+                hour, minute, second = time_only.split(':')
+
+                return {
+                    'year': int(year) + 2000,
+                    'month': int(month),
+                    'day': int(day),
+                    'hour': int(hour),
+                    'minute': int(minute),
+                    'second': int(second),
+                    'timezone': tz
+                }
+            except (IndexError, ValueError):
+                return None
+        return None
+
