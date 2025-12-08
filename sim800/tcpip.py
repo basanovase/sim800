@@ -109,3 +109,66 @@ class SIM800TCPIP(SIM800):
         self.uart.write(data)
         self.send_command('AT+HTTPACTION=1')
         return self.read_response()
+
+    def http_terminate(self):
+        """
+        Terminate HTTP service and release resources.
+
+        :return: The response from the SIM800 module.
+        """
+        return self.send_command('AT+HTTPTERM')
+
+    def ftp_init(self, server, username, password, port=21):
+        """
+        Initialize FTP session with server credentials.
+
+        :param server: FTP server address.
+        :param username: FTP username.
+        :param password: FTP password.
+        :param port: FTP port (default 21).
+        :return: The response from the SIM800 module.
+        """
+        self.send_command('AT+SAPBR=3,1,"Contype","GPRS"')
+        self.send_command('AT+SAPBR=1,1')
+        self.send_command(f'AT+FTPCID=1')
+        self.send_command(f'AT+FTPSERV="{server}"')
+        self.send_command(f'AT+FTPPORT={port}')
+        self.send_command(f'AT+FTPUN="{username}"')
+        return self.send_command(f'AT+FTPPW="{password}"')
+
+    def ftp_get_file(self, filename, remote_path):
+        """
+        Download a file from the FTP server.
+
+        :param filename: The name of the file to download.
+        :param remote_path: The remote directory path where the file is located.
+        :return: The file content from the FTP server.
+        """
+        self.send_command(f'AT+FTPGETPATH="{remote_path}"')
+        self.send_command(f'AT+FTPGETNAME="{filename}"')
+        self.send_command('AT+FTPGET=1')
+        return self.send_command('AT+FTPGET=2,1024', timeout=10000)
+
+    def ftp_put_file(self, filename, remote_path, data):
+        """
+        Upload a file to the FTP server.
+
+        :param filename: The name of the file to upload.
+        :param remote_path: The remote directory path to upload to.
+        :param data: The file content to upload.
+        :return: The response from the SIM800 module.
+        """
+        self.send_command(f'AT+FTPPUTPATH="{remote_path}"')
+        self.send_command(f'AT+FTPPUTNAME="{filename}"')
+        self.send_command('AT+FTPPUT=1')
+        self.send_command(f'AT+FTPPUT=2,{len(data)}')
+        self.uart.write(data if isinstance(data, bytes) else data.encode('utf-8'))
+        return self.read_response()
+
+    def ftp_close(self):
+        """
+        Close the FTP session and release bearer.
+
+        :return: The response from the SIM800 module.
+        """
+        return self.send_command('AT+SAPBR=0,1')
