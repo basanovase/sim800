@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch, call, ANY
+from unittest.mock import MagicMock, patch, call
 import sys
 
 # Mock the MicroPython modules before importing SIM800TCPIP
