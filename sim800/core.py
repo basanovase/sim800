@@ -46,6 +46,23 @@ class SIM800:
         """
         self.send_command('AT+CFUN=1,1')  # Reset the module
 
+    def dial_number(self, number):
+        """
+        Initiate a voice call to the specified phone number.
+
+        :param number: The phone number to dial (e.g., '+1234567890').
+        :return: The response from the SIM800 module.
+        """
+        return self.send_command(f'ATD{number};')
+
+    def hang_up(self):
+        """
+        Hang up the current voice call.
+
+        :return: The response from the SIM800 module.
+        """
+        return self.send_command('ATH')
+
     def get_network_time(self):
         """
         Gets the current time from the network.
@@ -62,11 +79,11 @@ class SIM800:
                 date_part, time_part = time_str.split(',')
                 year, month, day = date_part.split('/')
 
-       
+                # Handle timezone offset in time part (e.g., "12:30:45+04")
                 if '+' in time_part:
                     time_only, tz = time_part.split('+')
                     tz = '+' + tz
-                elif '-' in time_part[2:]:  
+                elif '-' in time_part[2:]:  # Skip first char to avoid negative hour confusion
                     idx = time_part.rfind('-')
                     time_only = time_part[:idx]
                     tz = time_part[idx:]
@@ -88,4 +105,3 @@ class SIM800:
             except (IndexError, ValueError):
                 return None
         return None
-
