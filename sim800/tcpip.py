@@ -28,6 +28,46 @@ class SIM800TCPIP(SIM800):
         """
         return self.send_command('AT+CIPCLOSE=1')
 
+    def start_udp_connection(self, ip, port):
+        """
+        Start a UDP connection to the specified IP address and port.
+
+        :param ip: The remote IP address to connect to.
+        :param port: The remote port number.
+        :return: The response from the SIM800 module.
+        """
+        return self.send_command(f'AT+CIPSTART="UDP","{ip}","{port}"')
+
+    def send_data_udp(self, data):
+        """
+        Send data through the UDP connection.
+
+        :param data: The data to send (string or bytes).
+        :return: The response from the SIM800 module.
+        """
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        self.send_command(f'AT+CIPSEND={len(data)}')
+        self.uart.write(data + bytes([26]))  # End with Ctrl-Z
+        return self.read_response()
+
+    def receive_data_udp(self, max_length=1460):
+        """
+        Receive data from UDP connection.
+
+        :param max_length: Maximum number of bytes to receive (default 1460, typical MTU).
+        :return: The response containing received data.
+        """
+        return self.send_command(f'AT+CIPRXGET=2,{max_length}')
+
+    def close_udp_connection(self):
+        """
+        Close the UDP connection.
+
+        :return: The response from the SIM800 module.
+        """
+        return self.send_command('AT+CIPCLOSE=1')
+
     def shutdown_gprs(self):
         """
         Deactivate GPRS PDP context, effectively shutting down the GPRS service.
