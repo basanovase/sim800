@@ -1,3 +1,5 @@
+import utime
+
 from .core import SIM800
 from .exceptions import (
     SIM800ConnectionError,
@@ -33,9 +35,9 @@ class SIM800TCPIP(SIM800):
         if not ip or not str(ip).strip():
             raise ValueError("IP address or hostname cannot be empty")
 
-    def start_tcp_connection(self, mode, ip, port, retry=True):
+    def _start_connection(self, mode, ip, port, retry=True):
         """
-        Start a TCP or UDP connection.
+        Internal method to start a TCP or UDP connection.
 
         :param mode: Connection mode ('TCP' or 'UDP').
         :param ip: IP address or hostname to connect to.
@@ -62,18 +64,33 @@ class SIM800TCPIP(SIM800):
                 if 'CONNECT OK' in response_str or 'ALREADY CONNECT' in response_str:
                     return response
                 if 'CONNECT FAIL' in response_str:
-                    last_error = SIM800ConnectionError("Failed to connect to {}:{}".format(ip, port), ip, port)
+                    last_error = SIM800ConnectionError(
+                        "{} connection failed to {}:{}".format(mode, ip, port), ip, port)
                 else:
                     return response
             except SIM800CommandError as e:
-                last_error = SIM800ConnectionError("Connection failed: {}".format(e), ip, port)
+                last_error = SIM800ConnectionError(
+                    "{} connection failed: {}".format(mode, e), ip, port)
 
             # Retry after delay if not last attempt
             if attempt < attempts - 1:
-                import utime
                 utime.sleep_ms(self.retry_delay_ms)
 
         raise last_error
+
+    def start_tcp_connection(self, mode, ip, port, retry=True):
+        """
+        Start a TCP or UDP connection.
+
+        :param mode: Connection mode ('TCP' or 'UDP').
+        :param ip: IP address or hostname to connect to.
+        :param port: Port number to connect to.
+        :param retry: If True, retry connection on failure (default True).
+        :return: The response from the SIM800 module.
+        :raises ValueError: If mode, ip, or port is invalid.
+        :raises SIM800ConnectionError: If connection fails.
+        """
+        return self._start_connection(mode, ip, port, retry)
 
     def send_data_tcp(self, data):
         """
@@ -120,32 +137,7 @@ class SIM800TCPIP(SIM800):
         :raises ValueError: If ip or port is invalid.
         :raises SIM800ConnectionError: If connection fails.
         """
-        self._validate_ip_or_host(ip)
-        self._validate_port(port)
-
-        command = 'AT+CIPSTART="UDP","{}","{}"'.format(ip, port)
-        last_error = None
-
-        attempts = (self.retries + 1) if retry else 1
-        for attempt in range(attempts):
-            try:
-                response = self.send_command(command, timeout=10000)
-                response_str = self._decode_response(response)
-                if 'CONNECT OK' in response_str or 'ALREADY CONNECT' in response_str:
-                    return response
-                if 'CONNECT FAIL' in response_str:
-                    last_error = SIM800ConnectionError("Failed to connect to {}:{}".format(ip, port), ip, port)
-                else:
-                    return response
-            except SIM800CommandError as e:
-                last_error = SIM800ConnectionError("UDP connection failed: {}".format(e), ip, port)
-
-            # Retry after delay if not last attempt
-            if attempt < attempts - 1:
-                import utime
-                utime.sleep_ms(self.retry_delay_ms)
-
-        raise last_error
+        return self._start_connection('UDP', ip, port, retry)
 
     def send_data_udp(self, data):
         """

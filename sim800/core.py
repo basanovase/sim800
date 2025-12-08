@@ -7,6 +7,9 @@ from .exceptions import (
     SIM800InitializationError,
 )
 
+# Sentinel to distinguish "no timeout wanted" from "use default timeout"
+_NO_TIMEOUT = object()
+
 # Default retry configuration
 DEFAULT_RETRIES = 3
 DEFAULT_RETRY_DELAY_MS = 500
@@ -36,13 +39,14 @@ class SIM800:
             raise SIM800InitializationError("Failed to initialize UART: {}".format(e))
         self.initialize()
 
-    def send_command(self, command, timeout=1000, check_error=True):
+    def send_command(self, command, timeout=1000, check_error=True, require_response=True):
         """
         Sends an AT command to the SIM800 module.
 
         :param command: The AT command to send.
         :param timeout: Timeout in milliseconds to wait for response.
         :param check_error: If True, raises exception on ERROR response.
+        :param require_response: If True, raises SIM800TimeoutError when no response received.
         :return: The response from the module.
         :raises SIM800CommandError: If the command returns an ERROR response.
         :raises SIM800TimeoutError: If no response is received within timeout.
@@ -50,6 +54,9 @@ class SIM800:
         self.uart.write(command + '\r')
         utime.sleep_ms(100)  # Delay to allow command processing
         response = self.read_response(timeout)
+
+        if require_response and not response:
+            raise SIM800TimeoutError(command, timeout)
 
         if check_error and response:
             response_str = self._decode_response(response)
@@ -158,7 +165,7 @@ class SIM800:
             # Check module presence with retries (module may be slow to start)
             response = None
             for attempt in range(self.retries + 1):
-                response = self.send_command('AT', check_error=False)
+                response = self.send_command('AT', check_error=False, require_response=False)
                 response_str = self._decode_response(response)
                 if 'OK' in response_str or 'AT' in response_str:
                     break
@@ -210,46 +217,43 @@ class SIM800:
         """
         Gets the current time from the network.
 
-        :return: Dictionary with year, month, day, hour, minute, second, and timezone,
-                 or None if the time could not be retrieved.
+        :return: Dictionary with year, month, day, hour, minute, second, and timezone.
+        :raises SIM800CommandError: If the time could not be retrieved or parsed.
         """
-        try:
-            response = self.send_command('AT+CCLK?', check_error=False)
-        except SIM800CommandError:
-            return None
-
+        response = self.send_command('AT+CCLK?', check_error=False)
         response_str = self._decode_response(response)
 
-        if '+CCLK:' in response_str:
-            try:
-                # Response format: +CCLK: "yy/MM/dd,HH:mm:ss±zz"
-                time_str = response_str.split('+CCLK:')[1].split('"')[1]
-                date_part, time_part = time_str.split(',')
-                year, month, day = date_part.split('/')
+        if '+CCLK:' not in response_str:
+            raise SIM800CommandError('AT+CCLK?', response_str.strip())
 
-                # Handle timezone offset in time part (e.g., "12:30:45+04")
-                if '+' in time_part:
-                    time_only, tz = time_part.split('+')
-                    tz = '+' + tz
-                elif '-' in time_part[2:]:  # Skip first char to avoid negative hour confusion
-                    idx = time_part.rfind('-')
-                    time_only = time_part[:idx]
-                    tz = time_part[idx:]
-                else:
-                    time_only = time_part
-                    tz = '+00'
+        try:
+            # Response format: +CCLK: "yy/MM/dd,HH:mm:ss±zz"
+            time_str = response_str.split('+CCLK:')[1].split('"')[1]
+            date_part, time_part = time_str.split(',')
+            year, month, day = date_part.split('/')
 
-                hour, minute, second = time_only.split(':')
+            # Handle timezone offset in time part (e.g., "12:30:45+04")
+            if '+' in time_part:
+                time_only, tz = time_part.split('+')
+                tz = '+' + tz
+            elif '-' in time_part[2:]:  # Skip first char to avoid negative hour confusion
+                idx = time_part.rfind('-')
+                time_only = time_part[:idx]
+                tz = time_part[idx:]
+            else:
+                time_only = time_part
+                tz = '+00'
 
-                return {
-                    'year': int(year) + 2000,
-                    'month': int(month),
-                    'day': int(day),
-                    'hour': int(hour),
-                    'minute': int(minute),
-                    'second': int(second),
-                    'timezone': tz
-                }
-            except (IndexError, ValueError):
-                return None
-        return None
+            hour, minute, second = time_only.split(':')
+
+            return {
+                'year': int(year) + 2000,
+                'month': int(month),
+                'day': int(day),
+                'hour': int(hour),
+                'minute': int(minute),
+                'second': int(second),
+                'timezone': tz
+            }
+        except (IndexError, ValueError) as e:
+            raise SIM800CommandError('AT+CCLK?', "Failed to parse time response: {}".format(response_str.strip()))

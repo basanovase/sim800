@@ -1,0 +1,13 @@
+{
+  "urls": [
+    ["sim800/__init__.py", "sim800/__init__.py"],
+    ["sim800/core.py", "sim800/core.py"],
+    ["sim800/sms.py", "sim800/sms.py"],
+    ["sim800/gprs.py", "sim800/gprs.py"],
+    ["sim800/tcpip.py", "sim800/tcpip.py"],
+    ["sim800/exceptions.py", "sim800/exceptions.py"],
+    ["sim800/utils.py", "sim800/utils.py"]
+  ],
+  "deps": [],
+  "version": "1.0.0"
+}

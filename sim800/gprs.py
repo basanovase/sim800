@@ -64,25 +64,28 @@ class SIM800GPRS(SIM800TCPIP):
         """
         Get the GSM location based on the nearest cell tower.
 
-        :return: Dictionary with longitude, latitude, and timestamp, or raw response if parsing fails.
-        :raises SIM800CommandError: If command fails.
+        :return: Dictionary with longitude, latitude, date, and time.
+        :raises SIM800CommandError: If command fails or response cannot be parsed.
         """
         response = self.send_command('AT+CIPGSMLOC=1,1', check_error=False)
         response_str = self._decode_response(response)
 
-        # Try to parse the location response
         # Format: +CIPGSMLOC: 0,longitude,latitude,date,time
-        if '+CIPGSMLOC:' in response_str:
-            try:
-                parts = response_str.split('+CIPGSMLOC:')[1].split(',')
-                if len(parts) >= 5 and parts[0].strip() == '0':
-                    return {
-                        'longitude': float(parts[1].strip()),
-                        'latitude': float(parts[2].strip()),
-                        'date': parts[3].strip(),
-                        'time': parts[4].strip().split('\r')[0]
-                    }
-            except (IndexError, ValueError):
-                pass
+        if '+CIPGSMLOC:' not in response_str:
+            raise SIM800CommandError('AT+CIPGSMLOC=1,1', response_str.strip())
 
-        return response
+        try:
+            parts = response_str.split('+CIPGSMLOC:')[1].split(',')
+            error_code = parts[0].strip()
+            if error_code != '0':
+                raise SIM800CommandError('AT+CIPGSMLOC=1,1', "Location error code: {}".format(error_code))
+            if len(parts) < 5:
+                raise SIM800CommandError('AT+CIPGSMLOC=1,1', "Incomplete response: {}".format(response_str.strip()))
+            return {
+                'longitude': float(parts[1].strip()),
+                'latitude': float(parts[2].strip()),
+                'date': parts[3].strip(),
+                'time': parts[4].strip().split('\r')[0]
+            }
+        except (IndexError, ValueError) as e:
+            raise SIM800CommandError('AT+CIPGSMLOC=1,1', "Failed to parse location: {}".format(response_str.strip()))

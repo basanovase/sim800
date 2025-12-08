@@ -7,6 +7,7 @@ sys.modules['machine'] = MagicMock()
 sys.modules['utime'] = MagicMock()
 
 from sim800.core import SIM800
+from sim800.exceptions import SIM800CommandError, SIM800TimeoutError
 
 
 class TestVoiceCalls(unittest.TestCase):
@@ -100,20 +101,22 @@ class TestGetNetworkTime(unittest.TestCase):
         self.assertEqual(result['timezone'], '+00')
 
     def test_get_network_time_error_response(self):
-        """Test handling of error response"""
+        """Test handling of error response raises exception"""
         self.sim.send_command = MagicMock(return_value=b'ERROR\r\n')
 
-        result = self.sim.get_network_time()
+        with self.assertRaises(SIM800CommandError) as ctx:
+            self.sim.get_network_time()
 
-        self.assertIsNone(result)
+        self.assertEqual(ctx.exception.command, 'AT+CCLK?')
 
     def test_get_network_time_malformed_response(self):
-        """Test handling of malformed response"""
+        """Test handling of malformed response raises exception"""
         self.sim.send_command = MagicMock(return_value=b'+CCLK: "invalid"\r\nOK\r\n')
 
-        result = self.sim.get_network_time()
+        with self.assertRaises(SIM800CommandError) as ctx:
+            self.sim.get_network_time()
 
-        self.assertIsNone(result)
+        self.assertIn('parse', str(ctx.exception).lower())
 
     def test_get_network_time_string_response(self):
         """Test handling when response is already a string"""
@@ -123,6 +126,89 @@ class TestGetNetworkTime(unittest.TestCase):
 
         self.assertEqual(result['year'], 2024)
         self.assertEqual(result['hour'], 14)
+
+
+class TestSendCommand(unittest.TestCase):
+    def setUp(self):
+        with patch.object(SIM800, '__init__', lambda self, *args, **kwargs: None):
+            self.sim = SIM800(1)
+            self.sim.uart = MagicMock()
+            self.sim.retries = 3
+            self.sim.retry_delay_ms = 500
+
+    def test_send_command_timeout_raises_exception(self):
+        """Test that empty response raises SIM800TimeoutError when require_response=True"""
+        self.sim.uart.any.return_value = False
+        self.sim.read_response = MagicMock(return_value=b'')
+
+        with self.assertRaises(SIM800TimeoutError) as ctx:
+            self.sim.send_command('AT+TEST', timeout=1000, require_response=True)
+
+        self.assertEqual(ctx.exception.command, 'AT+TEST')
+        self.assertEqual(ctx.exception.timeout_ms, 1000)
+
+    def test_send_command_timeout_no_exception_when_not_required(self):
+        """Test that empty response returns empty bytes when require_response=False"""
+        self.sim.read_response = MagicMock(return_value=b'')
+
+        result = self.sim.send_command('AT+TEST', timeout=1000, require_response=False)
+
+        self.assertEqual(result, b'')
+
+    def test_send_command_error_response(self):
+        """Test that ERROR response raises SIM800CommandError"""
+        self.sim.read_response = MagicMock(return_value=b'ERROR\r\n')
+
+        with self.assertRaises(SIM800CommandError) as ctx:
+            self.sim.send_command('AT+BAD')
+
+        self.assertEqual(ctx.exception.command, 'AT+BAD')
+
+    def test_send_command_success(self):
+        """Test successful command returns response"""
+        self.sim.read_response = MagicMock(return_value=b'OK\r\n')
+
+        result = self.sim.send_command('AT')
+
+        self.assertEqual(result, b'OK\r\n')
+
+
+class TestSendCommandWithRetry(unittest.TestCase):
+    def setUp(self):
+        with patch.object(SIM800, '__init__', lambda self, *args, **kwargs: None):
+            self.sim = SIM800(1)
+            self.sim.uart = MagicMock()
+            self.sim.retries = 2
+            self.sim.retry_delay_ms = 100
+            self.sim._clear_uart_buffer = MagicMock()
+
+    def test_retry_succeeds_on_second_attempt(self):
+        """Test command succeeds after first failure"""
+        responses = [SIM800TimeoutError('AT', 1000), b'OK\r\n']
+        call_count = [0]
+
+        def mock_send_command(*args, **kwargs):
+            result = responses[call_count[0]]
+            call_count[0] += 1
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        self.sim.send_command = mock_send_command
+
+        result = self.sim.send_command_with_retry('AT', retries=2)
+
+        self.assertEqual(result, b'OK\r\n')
+        self.assertEqual(call_count[0], 2)
+
+    def test_retry_exhausted_raises_last_exception(self):
+        """Test that last exception is raised after all retries fail"""
+        self.sim.send_command = MagicMock(side_effect=SIM800TimeoutError('AT', 1000))
+
+        with self.assertRaises(SIM800TimeoutError):
+            self.sim.send_command_with_retry('AT', retries=2)
+
+        self.assertEqual(self.sim.send_command.call_count, 3)  # 1 + 2 retries
 
 
 if __name__ == '__main__':
